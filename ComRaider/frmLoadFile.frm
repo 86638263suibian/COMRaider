@@ -133,6 +133,22 @@ Attribute VB_Exposed = False
 '         this program; if not, write to the Free Software Foundation, Inc., 59 Temple
 '         Place, Suite 330, Boston, MA 02111-1307 USA
 
+Private Declare Function ExpandEnvironmentStrings _
+   Lib "kernel32" Alias "ExpandEnvironmentStringsA" _
+   (ByVal lpSrc As String, ByVal lpDst As String, _
+   ByVal nSize As Long) As Long
+   
+Public Function ResolvePath(strInput As String) As String
+    On Error Resume Next
+    Dim result As Long
+    Dim strOutput As String
+    '' Two calls required, one to get expansion buffer length first then do expansion
+    result = ExpandEnvironmentStrings(strInput, strOutput, result)
+    strOutput = Space$(result)
+    result = ExpandEnvironmentStrings(strInput, strOutput, result)
+    If result > 1 Then strOutput = Mid(strOutput, 1, result - 1)
+    ResolvePath = strOutput
+End Function
 
 Private Sub cndNext_Click()
     Dim f As String, ff As String
@@ -162,7 +178,12 @@ Private Sub cndNext_Click()
             If reg.keyExists(f) Then
                 f = reg.ReadValue(f, "")
                 f = StripQuotes(f)
-                If fso.FileExists(f) Then frmtlbViewer.LoadFile f, ff
+                If InStr(f, "%") > 0 Then f = ResolvePath(f)
+                If fso.FileExists(f) Then
+                    frmtlbViewer.LoadFile f, ff
+                Else
+                    MsgBox "Clsid found, but file not: " & f
+                End If
             Else
                 MsgBox "Could not find its InProcServer32 entry", vbInformation
             End If
@@ -172,7 +193,7 @@ Private Sub cndNext_Click()
         
     ElseIf Option4.value Then  'load test files and goto fuzz ui
         Dim tmp() As String
-        Dim X
+        Dim x
         
         f = LCase(dlg.FolderDialog("C:\COMRaid", Me.hwnd))
         If Len(f) = 0 Then Exit Sub
@@ -190,8 +211,8 @@ Private Sub cndNext_Click()
         End If
         
         'damn filter :(
-        For Each X In tmp
-            If InStr(X, ".wsf") > 0 Then push Files, X
+        For Each x In tmp
+            If InStr(x, ".wsf") > 0 Then push Files, x
         Next
         
         If AryIsEmpty(Files) Then

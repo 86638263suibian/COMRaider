@@ -54,7 +54,6 @@ Begin VB.Form frmCrashMon
          Begin VB.Image Image1 
             Height          =   480
             Left            =   120
-            Picture         =   "frmCrashMon.frx":0000
             Top             =   300
             Width           =   480
          End
